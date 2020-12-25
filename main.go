@@ -1,38 +1,32 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"log"
-	"os"
-	"strings"
 
 	"github.com/OleksandrYehorov/clipboard-translator/mtranslator"
 	"github.com/OleksandrYehorov/clipboard-translator/translator"
+	"github.com/atotto/clipboard"
+
+	hook "github.com/robotn/gohook"
 )
 
 func main() {
-	log.SetFlags(0)
+	hook.Register(hook.KeyDown, []string{"ctrl", "c"}, func(e hook.Event) {
+		log.Print(e.Clicks)
+		var t translator.Translator
+		var cancel context.CancelFunc
 
-	var t translator.Translator
-	var cancel context.CancelFunc
+		textToTranslate, _ := clipboard.ReadAll()
 
-	t, cancel = mtranslator.New()
-	defer cancel()
+		t, cancel = mtranslator.New()
+		defer cancel()
+		fromLang, toLang := "auto", "ru"
+		translatedtext, _ := t.Translate(fromLang, toLang, textToTranslate)
 
-	textsToTranslate := []string{
-		"травень",
-	}
+		clipboard.WriteAll(translatedtext)
+	})
 
-	fromLang, toLang := "uk", "en"
-
-	for _, text := range textsToTranslate {
-		translatedtext, error := t.Translate(fromLang, toLang, text)
-		if error != nil {
-			log.Fatal(error)
-		}
-		log.Printf("%v -> %v", text, strings.TrimSpace(translatedtext))
-	}
-
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	s := hook.Start()
+	<-hook.Process(s)
 }
